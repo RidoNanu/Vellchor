@@ -1,0 +1,20 @@
+:root {
+  --bg: #0f0f10;
+  --surface: #17181b;
+  --surface-soft: #1d1f22;
+  --text: #ece6df;
+  --text-muted: #b5ada4;
+  --line: #303338;
+  --accent: #d8b07e;
+
+  --font-ui: 'IBM Plex Sans', 'Segoe UI', sans-serif;
+  --font-poem: 'Cormorant Garamond', Georgia, serif;
+
+  --space-1: 0.5rem;
+  --space-2: 1rem;
+  --space-3: 1.5rem;
+  --space-4: 2rem;
+  --space-5: 3rem;
+
+  color-scheme: dark;
+}

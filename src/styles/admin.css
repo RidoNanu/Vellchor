@@ -1,0 +1,322 @@
+.admin-shell {
+  margin: 0 auto;
+  padding: 0 1rem var(--space-5);
+  width: min(1020px, 100%);
+}
+
+.admin-shell main {
+  padding-top: clamp(1rem, 2vw, 1.5rem);
+}
+
+.admin-page {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.admin-page h1 {
+  margin-bottom: 0.1rem;
+}
+
+.admin-stats {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: 460px;
+}
+
+.admin-stats article {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  min-height: 98px;
+  padding: 1rem 1.1rem;
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.admin-stats span {
+  color: var(--text-muted);
+  display: block;
+  font-size: 0.88rem;
+  margin-bottom: 0.45rem;
+}
+
+.admin-stats strong {
+  font-family: var(--font-poem);
+  font-size: 1.45rem;
+  font-weight: 500;
+}
+
+.admin-state {
+  margin: 0;
+}
+
+.admin-stats article:hover {
+  border-color: rgba(216, 176, 126, 0.28);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.16);
+}
+
+.dashboard-list {
+  display: grid;
+  gap: 0.85rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.dashboard-list li {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  justify-content: space-between;
+  padding: 1rem 1.1rem;
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.dashboard-list li:hover {
+  border-color: rgba(216, 176, 126, 0.25);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.2);
+}
+
+.dashboard-title {
+  align-self: center;
+  font-family: var(--font-poem);
+  font-size: 1.15rem;
+  margin: 0;
+}
+
+.dashboard-actions {
+  display: flex;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.dashboard-link,
+.dashboard-delete {
+  align-items: center;
+  border-radius: 12px;
+  display: inline-flex;
+  font-size: 0.9rem;
+  justify-content: center;
+  min-height: 2.25rem;
+  min-width: 4.3rem;
+  padding: 0.45rem 0.75rem;
+  transition: transform 160ms ease, border-color 160ms ease, color 160ms ease,
+    box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.dashboard-link {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--line);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.dashboard-link:hover {
+  border-color: rgba(216, 176, 126, 0.3);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.14);
+}
+
+.dashboard-link:focus-visible,
+.dashboard-delete:focus-visible,
+.admin-shell .poem-form button:focus-visible,
+.admin-login .poem-form button:focus-visible,
+.admin-shell .ghost-button:focus-visible,
+.admin-shell .nav-links a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 3px rgba(216, 176, 126, 0.18);
+}
+
+.dashboard-delete {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--line);
+  color: #f1d7d7;
+}
+
+.dashboard-delete:hover {
+  border-color: rgba(233, 128, 128, 0.35);
+  color: #ffd5d5;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.14);
+}
+
+.admin-shell .poem-form button,
+.admin-login .poem-form button {
+  border-radius: 12px;
+  font-size: 0.92rem;
+  min-height: 2.45rem;
+  padding: 0.55rem 0.85rem;
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease,
+    background-color 160ms ease;
+}
+
+.admin-shell .poem-form-submit {
+  border-radius: 12px;
+  min-width: 7.2rem;
+}
+
+.admin-login {
+  display: grid;
+  min-height: clamp(28rem, 72vh, 42rem);
+  place-items: center;
+}
+
+.admin-login-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.2);
+  padding: clamp(1.1rem, 3vw, 1.55rem);
+  width: min(460px, 100%);
+}
+
+.admin-login-card .admin-eyebrow {
+  color: var(--accent);
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  margin: 0 0 0.35rem;
+  text-transform: uppercase;
+}
+
+.admin-login-card .admin-subtitle {
+  color: var(--text-muted);
+  margin: 0.45rem 0 0;
+}
+
+.admin-login .poem-form {
+  gap: 0.85rem;
+  margin: 1rem 0 0;
+  max-width: none;
+}
+
+.admin-login .poem-form label {
+  gap: 0.42rem;
+}
+
+.admin-login .poem-form input {
+  border-radius: 10px;
+  min-height: 2.65rem;
+  padding: 0.68rem 0.85rem;
+}
+
+.admin-login .password-field {
+  position: relative;
+}
+
+.admin-login .password-field input {
+  padding-right: 2.75rem;
+  width: 100%;
+}
+
+.admin-login .password-toggle {
+  align-items: center;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--text-muted);
+  display: inline-flex;
+  height: 2.2rem;
+  justify-content: center;
+  min-height: 0;
+  padding: 0;
+  position: absolute;
+  right: 0.35rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2.2rem;
+}
+
+.admin-login .password-toggle svg {
+  height: 1.2rem;
+  width: 1.2rem;
+}
+
+.admin-login .password-toggle:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  transform: translateY(-50%);
+}
+
+.admin-login .poem-form .admin-login-submit {
+  border-radius: 10px;
+  min-height: 2.5rem;
+  padding: 0.56rem 0.82rem;
+  width: 100%;
+}
+
+.admin-empty-state {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  padding: 1.4rem;
+}
+
+.admin-empty-title {
+  font-family: var(--font-poem);
+  font-size: 1.2rem;
+  margin: 0 0 0.35rem;
+}
+
+.poem-form-header {
+  margin-bottom: 1rem;
+}
+
+.poem-form-header h2 {
+  margin-bottom: 0.35rem;
+}
+
+.poem-form-header p {
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.poem-form-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.checkbox-card {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 0.95rem 1rem;
+}
+
+.checkbox-card span {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.checkbox-card small {
+  color: var(--text-muted);
+}
+
+.poem-form-submit {
+  width: fit-content;
+}
+
+@media (max-width: 640px) {
+  .admin-stats {
+    grid-template-columns: 1fr;
+    max-width: none;
+  }
+
+  .dashboard-list li {
+    align-items: flex-start;
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+  }
+
+  .dashboard-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .poem-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
