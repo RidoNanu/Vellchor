@@ -2,7 +2,7 @@ import { motion, useReducedMotion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { FaInstagram } from 'react-icons/fa'
 import { MdEmail } from 'react-icons/md'
-import ridoPhoto from '../../assets/rido.JPG'
+import ridoPhoto from '../../assets/rido.jpg'
 
 const MotionArticle = motion.article
 const MotionAside = motion.aside
