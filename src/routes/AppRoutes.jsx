@@ -10,6 +10,21 @@ import AdminLoginPage from '../pages/admin/AdminLoginPage'
 import AdminDashboardPage from '../pages/admin/AdminDashboardPage'
 import AdminNewPoemPage from '../pages/admin/AdminNewPoemPage'
 import AdminEditPoemPage from '../pages/admin/AdminEditPoemPage'
+import { useAuth } from '../hooks/useAuth'
+
+function AdminEntryRoute() {
+  const { user, loading } = useAuth()
+
+  if (loading) {
+    return <p className="status-text">Checking session...</p>
+  }
+
+  if (!user) {
+    return <Navigate to="/admin/login" replace />
+  }
+
+  return <Navigate to="/admin/dashboard" replace />
+}
 
 function AppRoutes() {
   return (
@@ -21,6 +36,7 @@ function AppRoutes() {
         <Route path="/about" element={<AboutPage />} />
       </Route>
 
+      <Route path="/admin" element={<AdminEntryRoute />} />
       <Route path="/admin/login" element={<AdminLoginPage />} />
       <Route element={<ProtectedRoute />}>
         <Route element={<AdminLayout />}>
