@@ -1,5 +1,5 @@
 .container {
-  width: min(860px, 100% - 2rem);
+  width: min(860px, 100% - 1.5rem);
   margin: 0 auto;
 }
 
@@ -9,7 +9,7 @@
 }
 
 .page-content {
-  padding-top: var(--space-4);
+  padding-top: clamp(1.15rem, 3vw, var(--space-4));
 }
 
 .navbar,
@@ -359,6 +359,10 @@
   z-index: 1;
 }
 
+.landing-photo-inline {
+  display: none;
+}
+
 .landing-copy h1 {
   font-size: clamp(3rem, 7vw, 5.4rem);
   letter-spacing: -0.03em;
@@ -462,19 +466,60 @@
   z-index: 1;
 }
 
+.landing-photo-trigger {
+  cursor: zoom-in;
+}
+
+.landing-photo-trigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+
 .landing-portrait {
   height: 100%;
   inset: 0;
   object-fit: cover;
-  object-position: center bottom;
+  object-position: 50% 22%;
   position: absolute;
-  transform: scale(1.03);
+  transform: scale(1.01);
   transition: transform 420ms ease;
   width: 100%;
 }
 
 .landing-photo-card:hover .landing-portrait {
-  transform: scale(1.06);
+  transform: scale(1.03);
+}
+
+.landing-lightbox {
+  align-items: center;
+  background: rgba(6, 6, 8, 0.92);
+  display: grid;
+  inset: 0;
+  padding: 1.25rem;
+  place-items: center;
+  position: fixed;
+  z-index: 50;
+}
+
+.landing-lightbox-image {
+  border-radius: 18px;
+  box-shadow: 0 26px 70px rgba(0, 0, 0, 0.45);
+  max-height: 88vh;
+  max-width: min(92vw, 980px);
+  object-fit: contain;
+  width: auto;
+}
+
+.landing-lightbox-close {
+  background: rgba(18, 19, 24, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  color: var(--text);
+  min-height: 2.2rem;
+  padding: 0.45rem 0.85rem;
+  position: absolute;
+  right: 1rem;
+  top: 1rem;
 }
 
 .landing-photo-caption {
@@ -525,6 +570,88 @@
   border-top: 1px solid var(--line);
   position: relative;
   z-index: 2;
+}
+
+@media (max-width: 960px) {
+  .landing-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-photo-inline {
+    display: block;
+    margin-bottom: 0.15rem;
+    margin-inline: auto;
+    max-width: min(100%, 340px);
+  }
+
+  .landing-photo-inline.landing-card-hero.landing-photo-card {
+    min-height: clamp(10rem, 42vw, 13rem);
+  }
+
+  .landing-photo-inline .landing-photo-caption {
+    padding: 0.95rem 1rem;
+  }
+
+  .landing-photo-inline .landing-portrait {
+    object-position: 50% 18%;
+    transform: scale(1);
+  }
+
+  .landing-photo-inline:hover .landing-portrait {
+    transform: scale(1.01);
+  }
+
+  .landing-photo-inline .landing-card-label {
+    margin-bottom: 0.3rem;
+  }
+
+  .landing-photo-inline .landing-card-quote {
+    font-size: clamp(1.2rem, 5.6vw, 1.55rem);
+  }
+
+  .landing-photo-desktop {
+    display: none;
+  }
+
+  .landing-aside {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  .landing-stack {
+    height: 100%;
+  }
+
+  .landing-copy h1 {
+    max-width: 10ch;
+  }
+}
+
+@media (max-width: 860px) {
+  .navbar,
+  .admin-header {
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 0.55rem;
+    padding: 0.9rem 0.75rem;
+  }
+
+  .nav-links {
+    margin-left: auto;
+    flex-wrap: nowrap;
+    gap: 0.7rem;
+    justify-content: flex-end;
+  }
+
+  .brand {
+    font-size: 1.25rem;
+    flex-shrink: 0;
+  }
+
+  .nav-links a,
+  .ghost-button {
+    font-size: 0.98rem;
+  }
 }
 
 .contact-section {
@@ -631,16 +758,31 @@
     gap: 0.75rem;
   }
 
+  .container {
+    width: min(860px, 100% - 1rem);
+  }
+
   .landing-ambient-quotes {
     display: none;
   }
 
-  .landing-grid {
+  .landing-aside {
     grid-template-columns: 1fr;
   }
 
   .landing-copy h1 {
     max-width: none;
+    font-size: clamp(2.3rem, 12vw, 3.2rem);
+    line-height: 1;
+  }
+
+  .landing-intro {
+    font-size: 1.02rem;
+  }
+
+  .landing-card {
+    border-radius: 20px;
+    padding: 1.1rem;
   }
 
   .landing-card-hero {
@@ -651,9 +793,56 @@
     min-height: min(28rem, 112vw);
   }
 
+  .landing-photo-inline.landing-card-hero.landing-photo-card {
+    min-height: min(11rem, 48vw);
+  }
+
+  .landing-photo-inline .landing-portrait {
+    object-position: 50% 14%;
+  }
+
   pre {
     font-size: 1.1rem;
     line-height: 1.8;
+  }
+
+  .landing-contact {
+    margin-top: clamp(2rem, 7vw, 2.8rem);
+    padding-top: 1.75rem;
+  }
+
+  .landing-lightbox {
+    padding: 0.8rem;
+  }
+
+  .landing-lightbox-image {
+    border-radius: 12px;
+    max-width: 95vw;
+  }
+
+  .contact-links {
+    gap: 1.25rem;
+  }
+}
+
+@media (max-width: 440px) {
+  .navbar,
+  .admin-header {
+    padding-left: 0.6rem;
+    padding-right: 0.6rem;
+  }
+
+  .brand {
+    font-size: 1.12rem;
+  }
+
+  .nav-links {
+    gap: 0.5rem;
+  }
+
+  .nav-links a,
+  .ghost-button {
+    font-size: 0.9rem;
   }
 }
 

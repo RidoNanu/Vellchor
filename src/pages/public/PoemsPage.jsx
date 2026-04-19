@@ -96,15 +96,25 @@ function PoemsPage() {
 
   useEffect(() => {
     async function loadPoems() {
-      const { data, error: fetchError } = await fetchPublishedPoems()
+      setLoading(true)
+      setError('')
 
-      if (fetchError) {
-        setError(fetchError.message)
-      } else {
+      try {
+        const { data, error: fetchError } = await fetchPublishedPoems()
+
+        if (fetchError) {
+          setPoems([])
+          setError(fetchError.message)
+          return
+        }
+
         setPoems(data || [])
+      } catch (loadError) {
+        setPoems([])
+        setError(loadError?.message || 'Could not load poems. Please try again.')
+      } finally {
+        setLoading(false)
       }
-
-      setLoading(false)
     }
 
     loadPoems()

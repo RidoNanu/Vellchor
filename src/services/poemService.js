@@ -19,11 +19,56 @@ export async function fetchAdminPoems() {
 }
 
 export async function fetchPoemBySlug(slug) {
-  return supabase
+  const normalizedSlug = decodeURIComponent((slug || '').trim())
+
+  const exactResult = await supabase
     .from(POEMS_TABLE)
     .select('*')
-    .eq('slug', slug)
-    .single()
+    .eq('published', true)
+    .eq('slug', normalizedSlug)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (exactResult.data || exactResult.error) {
+    return exactResult
+  }
+
+  const caseInsensitiveResult = await supabase
+    .from(POEMS_TABLE)
+    .select('*')
+    .eq('published', true)
+    .ilike('slug', normalizedSlug)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (caseInsensitiveResult.data || caseInsensitiveResult.error) {
+    return caseInsensitiveResult
+  }
+
+  const { data: publishedPoems, error } = await supabase
+    .from(POEMS_TABLE)
+    .select('*')
+    .eq('published', true)
+    .order('updated_at', { ascending: false })
+
+  if (error) {
+    return { data: null, error }
+  }
+
+  const toSlugKey = (value = '') =>
+    value
+      .toString()
+      .toLowerCase()
+      .trim()
+      .replace(/[_\s]+/g, '-')
+      .replace(/-+/g, '-')
+
+  const slugKey = toSlugKey(normalizedSlug)
+  const fallback = (publishedPoems || []).find((poem) => toSlugKey(poem.slug) === slugKey)
+
+  return { data: fallback || null, error: null }
 }
 
 export async function fetchPoemById(id) {

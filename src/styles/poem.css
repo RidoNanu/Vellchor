@@ -74,3 +74,31 @@
 .comments .status-text {
   margin-bottom: 0;
 }
+
+@media (max-width: 760px) {
+  .poem-viewer {
+    margin-bottom: var(--space-3);
+  }
+
+  .poem-viewer header {
+    text-align: left;
+    margin-bottom: var(--space-2);
+  }
+}
+
+@media (max-width: 640px) {
+  .poem-card {
+    border-radius: 12px;
+    padding: 1.05rem;
+  }
+
+  .comments {
+    border-radius: 20px;
+    margin-top: var(--space-3);
+    padding: 1rem;
+  }
+
+  .comments li {
+    padding: 0.85rem 0;
+  }
+}

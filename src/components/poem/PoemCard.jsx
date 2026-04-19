@@ -4,10 +4,11 @@ import { Link } from 'react-router-dom'
 function PoemCard({ poem }) {
   const prefersReducedMotion = useReducedMotion()
   const MotionLink = motion.create(Link)
+  const poemSlug = (poem.slug || poem.id || '').toString().trim()
 
   return (
     <MotionLink
-      to={`/poems/${poem.slug}`}
+      to={`/poems/${encodeURIComponent(poemSlug)}`}
       className="poem-card"
       whileHover={prefersReducedMotion ? undefined : { y: -4 }}
       whileTap={prefersReducedMotion ? undefined : { scale: 0.99 }}

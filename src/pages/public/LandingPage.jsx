@@ -1,4 +1,5 @@
-import { motion, useReducedMotion } from 'framer-motion'
+import { useEffect, useState } from 'react'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { FaInstagram } from 'react-icons/fa'
 import { MdEmail } from 'react-icons/md'
@@ -10,9 +11,27 @@ const MotionDiv = motion.div
 const MotionH1 = motion.h1
 const MotionP = motion.p
 const MotionSection = motion.section
+const MotionImg = motion.img
+const MotionButton = motion.button
 
 function LandingPage() {
   const prefersReducedMotion = useReducedMotion()
+  const [isImageOpen, setIsImageOpen] = useState(false)
+
+  useEffect(() => {
+    if (!isImageOpen) return undefined
+
+    function handleEscape(event) {
+      if (event.key === 'Escape') {
+        setIsImageOpen(false)
+      }
+    }
+
+    window.addEventListener('keydown', handleEscape)
+    return () => {
+      window.removeEventListener('keydown', handleEscape)
+    }
+  }, [isImageOpen])
 
   const containerVariants = {
     hidden: {},
@@ -67,28 +86,69 @@ function LandingPage() {
         <div className="landing-grid">
           <MotionDiv className="landing-copy" variants={containerVariants}>
             <MotionP className="kicker" variants={fadeUpVariants}>
-              Open museum of poems
+              Open museum of my poems
             </MotionP>
             <MotionH1 variants={fadeUpVariants}>Hey, I'm Rido Nanu.</MotionH1>
+            <MotionArticle
+              className="landing-card landing-card-hero landing-photo-card landing-photo-inline landing-photo-trigger"
+              variants={cardVariants}
+              onClick={() => setIsImageOpen(true)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  setIsImageOpen(true)
+                }
+              }}
+              tabIndex={0}
+              role="button"
+              aria-label="Open portrait image"
+              whileHover={prefersReducedMotion ? undefined : { y: -3 }}
+              whileTap={prefersReducedMotion ? undefined : { scale: 0.99 }}
+              transition={{ duration: 0.25 }}
+            >
+              <MotionImg
+                className="landing-portrait"
+                src={ridoPhoto}
+                alt="Portrait of Rido Nanu"
+                whileHover={prefersReducedMotion ? undefined : { scale: 1.03 }}
+                whileTap={prefersReducedMotion ? undefined : { scale: 1.01 }}
+                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+              />
+              <div className="landing-photo-caption">
+                <p className="landing-card-label">Meet the poet</p>
+                <p className="landing-card-quote">Rido Nanu</p>
+              </div>
+            </MotionArticle>
             <MotionP className="landing-intro" variants={fadeUpVariants}>
-              For the last five years, I've been writing—
-              not always to be understood, but to make sense of things I couldn't hold onto.
+              For over five years, I've been writing-not always to be understood,
+              but to make sense of things I couldn't hold onto.
             </MotionP>
             <MotionP variants={fadeUpVariants}>
-              Poetry, for me, has always been a place where I can open my mind without restraint—
+              Poetry, for me, has always been a place where I can open my mind without restraint-
               a space where thoughts don't have to be organized, where feelings don't need to be explained.
-              With every poem I write, I feel like I've grown a little—
+              With every poem I write, I feel like I've grown a little-
               not just as a writer, but as a person trying to understand himself.
             </MotionP>
             <MotionP variants={fadeUpVariants}>
               This website is a collection of those moments.
-              Some are unfinished feelings, some are questions, and some are just… echoes.
+              Some are unfinished feelings, some are questions, and some are just... echoes.
             </MotionP>
             <MotionP variants={fadeUpVariants}>
-              I've always been drawn to perspective—
+              I've always been drawn to perspective-
               how the same words can mean something entirely different to someone else.
               What you feel when you read these poems matters to me just as much as what I felt while writing them.
               It pushes me to see things differently, to try new ideas, to grow beyond my own thoughts.
+            </MotionP>
+            <MotionP variants={fadeUpVariants}>
+              Over time, I've also written for others-turning their experiences into words.
+              But I began to notice something: once those words are read, they often lose their weight,
+              becoming just another paragraph on a page. It made me realize that art doesn't really belong
+              to the moment it was written for, or even to the person it was written for-it belongs to
+              whoever feels something in it.
+            </MotionP>
+            <MotionP variants={fadeUpVariants}>
+              So this is not just a collection of what I've written,
+              but a reflection of how my mind has changed over time.
             </MotionP>
             <MotionP variants={fadeUpVariants}>
               If you find yourself in any of these lines,
@@ -117,12 +177,30 @@ function LandingPage() {
             variants={containerVariants}
           >
             <MotionArticle
-              className="landing-card landing-card-hero landing-photo-card"
+              className="landing-card landing-card-hero landing-photo-card landing-photo-desktop landing-photo-trigger"
               variants={cardVariants}
+              onClick={() => setIsImageOpen(true)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  setIsImageOpen(true)
+                }
+              }}
+              tabIndex={0}
+              role="button"
+              aria-label="Open portrait image"
               whileHover={prefersReducedMotion ? undefined : { y: -4 }}
+              whileTap={prefersReducedMotion ? undefined : { scale: 0.99 }}
               transition={{ duration: 0.25 }}
             >
-              <img className="landing-portrait" src={ridoPhoto} alt="Portrait of Rido Nanu" />
+              <MotionImg
+                className="landing-portrait"
+                src={ridoPhoto}
+                alt="Portrait of Rido Nanu"
+                whileHover={prefersReducedMotion ? undefined : { scale: 1.03 }}
+                whileTap={prefersReducedMotion ? undefined : { scale: 1.01 }}
+                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+              />
               <div className="landing-photo-caption">
                 <p className="landing-card-label">Meet the poet</p>
                 <p className="landing-card-quote">Rido Nanu</p>
@@ -184,6 +262,45 @@ function LandingPage() {
             </div>
           </MotionDiv>
         </div>
+
+        <AnimatePresence>
+          {isImageOpen ? (
+            <motion.div
+              className="landing-lightbox"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Portrait image preview"
+              onClick={() => setIsImageOpen(false)}
+              initial={prefersReducedMotion ? false : { opacity: 0 }}
+              animate={prefersReducedMotion ? undefined : { opacity: 1 }}
+              exit={prefersReducedMotion ? undefined : { opacity: 0 }}
+              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <MotionButton
+                type="button"
+                className="landing-lightbox-close"
+                onClick={() => setIsImageOpen(false)}
+                aria-label="Close image preview"
+                initial={prefersReducedMotion ? false : { opacity: 0, y: -8 }}
+                animate={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
+                exit={prefersReducedMotion ? undefined : { opacity: 0, y: -8 }}
+                transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+              >
+                Close
+              </MotionButton>
+              <MotionImg
+                className="landing-lightbox-image"
+                src={ridoPhoto}
+                alt="Portrait of Rido Nanu"
+                onClick={(event) => event.stopPropagation()}
+                initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.92, y: 14 }}
+                animate={prefersReducedMotion ? undefined : { opacity: 1, scale: 1, y: 0 }}
+                exit={prefersReducedMotion ? undefined : { opacity: 0, scale: 0.96, y: 10 }}
+                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+              />
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
     </MotionSection>
   )
 }

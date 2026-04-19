@@ -11,13 +11,37 @@ const initialState = {
 
 function PoemForm({ defaultValues = initialState, onSubmit, submitLabel = 'Save poem' }) {
   const [formData, setFormData] = useState(defaultValues)
+  const [previewTouched, setPreviewTouched] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const prefersReducedMotion = useReducedMotion()
 
+  function buildPreviewFromContent(content = '') {
+    const lines = content
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+
+    return lines.slice(0, 2).join('\n')
+  }
+
   useEffect(() => {
     setFormData(defaultValues)
+    setPreviewTouched(Boolean(defaultValues.preview?.trim()))
   }, [defaultValues])
+
+  useEffect(() => {
+    if (previewTouched) return
+    if (!formData.title.trim()) return
+
+    const generatedPreview = buildPreviewFromContent(formData.content)
+    if (!generatedPreview) return
+
+    setFormData((prev) => {
+      if (prev.preview === generatedPreview) return prev
+      return { ...prev, preview: generatedPreview }
+    })
+  }, [formData.content, formData.title, previewTouched])
 
   function updateField(field, value) {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -31,6 +55,7 @@ function PoemForm({ defaultValues = initialState, onSubmit, submitLabel = 'Save 
     const payload = {
       ...formData,
       slug: formData.slug.trim() || formData.title.toLowerCase().replace(/\s+/g, '-'),
+      preview: formData.preview.trim() || buildPreviewFromContent(formData.content),
     }
 
     const result = await onSubmit(payload)
@@ -77,7 +102,10 @@ function PoemForm({ defaultValues = initialState, onSubmit, submitLabel = 'Save 
         <textarea
           rows={3}
           value={formData.preview}
-          onChange={(event) => updateField('preview', event.target.value)}
+          onChange={(event) => {
+            setPreviewTouched(true)
+            updateField('preview', event.target.value)
+          }}
           placeholder="A short excerpt shown on the poems page"
           required
         />

@@ -18,6 +18,15 @@ function PoemDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
+  function withTimeout(promise, ms, message) {
+    return Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        setTimeout(() => reject(new Error(message)), ms)
+      }),
+    ])
+  }
+
   const sectionVariants = {
     hidden: {
       opacity: 0,
@@ -40,17 +49,43 @@ function PoemDetailPage() {
 
   useEffect(() => {
     async function loadPoem() {
-      const { data, error: fetchError } = await fetchPoemBySlug(slug)
+      setLoading(true)
+      setError('')
 
-      if (fetchError) {
-        setError(fetchError.message)
+      try {
+        const { data, error: fetchError } = await withTimeout(
+          fetchPoemBySlug(slug),
+          10000,
+          'Request timed out while loading the poem.',
+        )
+
+        if (fetchError) {
+          setPoem(null)
+          setComments([])
+          setError(fetchError.message)
+          return
+        }
+
+        if (!data) {
+          setPoem(null)
+          setComments([])
+          setError('Poem not found or not published.')
+          return
+        }
+
+        setPoem(data)
+
+        // Load comments after showing the poem so a slow comments query does not block the page.
+        loadComments(data.id).catch(() => {
+          setComments([])
+        })
+      } catch (loadError) {
+        setPoem(null)
+        setComments([])
+        setError(loadError?.message || 'Could not load poem. Please try again.')
+      } finally {
         setLoading(false)
-        return
       }
-
-      setPoem(data)
-      await loadComments(data.id)
-      setLoading(false)
     }
 
     loadPoem()
@@ -69,8 +104,7 @@ function PoemDetailPage() {
   return (
     <motion.section
       initial={prefersReducedMotion ? false : 'hidden'}
-      whileInView={prefersReducedMotion ? undefined : 'visible'}
-      viewport={{ once: true, amount: 0.12 }}
+      animate={prefersReducedMotion ? undefined : 'visible'}
       variants={sectionVariants}
     >
       {loading ? <p className="status-text">Loading poem...</p> : null}

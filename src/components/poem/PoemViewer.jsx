@@ -10,14 +10,12 @@ function PoemViewer({ poem }) {
     <motion.article
       className="poem-viewer"
       initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
-      whileInView={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.2 }}
+      animate={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
       transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
     >
       <motion.header
         initial={prefersReducedMotion ? false : { opacity: 0, y: 10 }}
-        whileInView={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.25 }}
+        animate={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
         transition={{ duration: 0.45, delay: 0.06, ease: [0.22, 1, 0.36, 1] }}
       >
         <h1>{poem.title}</h1>
@@ -25,8 +23,7 @@ function PoemViewer({ poem }) {
       </motion.header>
       <motion.pre
         initial={prefersReducedMotion ? false : { opacity: 0 }}
-        whileInView={prefersReducedMotion ? undefined : { opacity: 1 }}
-        viewport={{ once: true, amount: 0.25 }}
+        animate={prefersReducedMotion ? undefined : { opacity: 1 }}
         transition={{ duration: 0.5, delay: 0.14 }}
       >
         {poem.content}

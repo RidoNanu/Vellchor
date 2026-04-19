@@ -20,7 +20,7 @@ function AdminLayout() {
     <div className="admin-shell">
       <header className="admin-header">
         <MotionLink
-          to="/"
+          to="/admin/dashboard"
           className="brand"
           whileHover={prefersReducedMotion ? undefined : { y: -1 }}
           whileTap={prefersReducedMotion ? undefined : { scale: 0.98 }}

@@ -89,3 +89,21 @@ button:disabled {
   display: flex;
   gap: 0.6rem;
 }
+
+@media (max-width: 640px) {
+  input,
+  textarea,
+  button {
+    border-radius: 14px;
+  }
+
+  .comment-form,
+  .poem-form {
+    margin: var(--space-3) auto;
+  }
+
+  .comment-form {
+    border-radius: 20px;
+    padding: 1rem;
+  }
+}
