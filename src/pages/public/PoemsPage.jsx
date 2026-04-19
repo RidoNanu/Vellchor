@@ -3,6 +3,28 @@ import { motion, useReducedMotion } from 'framer-motion'
 import PoemList from '../../components/poem/PoemList'
 import { fetchPublishedPoems } from '../../services/poemService'
 
+const POEMS_CACHE_KEY = 'vellichor:poems:list:v1'
+
+function readPoemsCache() {
+  try {
+    const raw = localStorage.getItem(POEMS_CACHE_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed
+  } catch {
+    return []
+  }
+}
+
+function writePoemsCache(poems) {
+  try {
+    localStorage.setItem(POEMS_CACHE_KEY, JSON.stringify(poems))
+  } catch {
+    // Ignore cache write failures (private mode/quota) and keep network data flow.
+  }
+}
+
 const readingModeOptions = [
   { value: 'all', label: 'All poems' },
   { value: 'short', label: 'Short reads' },
@@ -95,39 +117,78 @@ function PoemsPage() {
   const [activeMenu, setActiveMenu] = useState(null)
 
   useEffect(() => {
+    let isActive = true
+
     async function loadPoems() {
-      setLoading(true)
       setError('')
 
+      const cachedPoems = readPoemsCache()
+      if (cachedPoems.length && isActive) {
+        setPoems(cachedPoems)
+        setLoading(false)
+      } else if (isActive) {
+        setLoading(true)
+      }
+
       try {
+        console.time('fetch')
         const { data, error: fetchError } = await fetchPublishedPoems()
 
+        if (!isActive) {
+          return
+        }
+
         if (fetchError) {
-          setPoems([])
+          if (!cachedPoems.length) {
+            setPoems([])
+          }
           setError(fetchError.message)
           return
         }
 
-        setPoems(data || [])
+        const freshPoems = data || []
+        setPoems(freshPoems)
+        writePoemsCache(freshPoems)
       } catch (loadError) {
-        setPoems([])
-        setError(loadError?.message || 'Could not load poems. Please try again.')
+        if (!isActive) {
+          return
+        }
+
+        const message = loadError?.message || ''
+        const isAbortLikeError =
+          loadError?.name === 'AbortError' || message.toLowerCase().includes('lock broken')
+
+        if (isAbortLikeError) {
+          return
+        }
+
+        if (!cachedPoems.length) {
+          setPoems([])
+        }
+        setError(message || 'Could not load poems. Please try again.')
       } finally {
-        setLoading(false)
+        console.timeEnd('fetch')
+        if (isActive) {
+          setLoading(false)
+        }
       }
     }
 
     loadPoems()
+
+    return () => {
+      isActive = false
+    }
   }, [])
 
   const filteredPoems = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase()
 
     const filtered = poems.filter((poem) => {
-      const content = `${poem.title ?? ''} ${poem.preview ?? ''} ${poem.content ?? ''}`.toLowerCase()
+      const content = `${poem.title ?? ''} ${poem.preview ?? ''} ${poem.slug ?? ''}`.toLowerCase()
       const matchesSearch = !normalizedSearch || content.includes(normalizedSearch)
 
-      const bodyLength = (poem.content || poem.preview || '').trim().length
+      const bodyLength = (poem.preview || '').trim().length
       const matchesReadingMode =
         readingMode === 'all' ||
         (readingMode === 'short' && bodyLength < 500) ||
@@ -136,12 +197,12 @@ function PoemsPage() {
 
       return matchesSearch && matchesReadingMode
     })
-    const getLength = (poem) => (poem.content || poem.preview || '').trim().length
+    const getLength = (poem) => (poem.preview || '').trim().length
 
     return [...filtered].sort((firstPoem, secondPoem) => {
       switch (sortMode) {
         case 'oldest':
-          return new Date(firstPoem.created_at || 0) - new Date(secondPoem.created_at || 0)
+          return poems.indexOf(secondPoem) - poems.indexOf(firstPoem)
         case 'title-asc':
           return (firstPoem.title || '').localeCompare(secondPoem.title || '')
         case 'title-desc':
@@ -152,7 +213,7 @@ function PoemsPage() {
           return getLength(secondPoem) - getLength(firstPoem)
         case 'newest':
         default:
-          return new Date(secondPoem.created_at || 0) - new Date(firstPoem.created_at || 0)
+          return poems.indexOf(firstPoem) - poems.indexOf(secondPoem)
       }
     })
   }, [poems, readingMode, searchTerm, sortMode])

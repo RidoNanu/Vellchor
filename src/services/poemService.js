@@ -6,9 +6,10 @@ const COMMENTS_TABLE = 'comments'
 export async function fetchPublishedPoems() {
   return supabase
     .from(POEMS_TABLE)
-    .select('*')
+    .select('id,title,preview,slug')
     .eq('published', true)
     .order('created_at', { ascending: false })
+    .limit(10)
 }
 
 export async function fetchAdminPoems() {
@@ -23,10 +24,9 @@ export async function fetchPoemBySlug(slug) {
 
   const exactResult = await supabase
     .from(POEMS_TABLE)
-    .select('*')
+    .select('id,title,preview,slug,content,created_at')
     .eq('published', true)
     .eq('slug', normalizedSlug)
-    .order('updated_at', { ascending: false })
     .limit(1)
     .maybeSingle()
 
@@ -36,10 +36,9 @@ export async function fetchPoemBySlug(slug) {
 
   const caseInsensitiveResult = await supabase
     .from(POEMS_TABLE)
-    .select('*')
+    .select('id,title,preview,slug,content,created_at')
     .eq('published', true)
     .ilike('slug', normalizedSlug)
-    .order('updated_at', { ascending: false })
     .limit(1)
     .maybeSingle()
 
@@ -47,28 +46,7 @@ export async function fetchPoemBySlug(slug) {
     return caseInsensitiveResult
   }
 
-  const { data: publishedPoems, error } = await supabase
-    .from(POEMS_TABLE)
-    .select('*')
-    .eq('published', true)
-    .order('updated_at', { ascending: false })
-
-  if (error) {
-    return { data: null, error }
-  }
-
-  const toSlugKey = (value = '') =>
-    value
-      .toString()
-      .toLowerCase()
-      .trim()
-      .replace(/[_\s]+/g, '-')
-      .replace(/-+/g, '-')
-
-  const slugKey = toSlugKey(normalizedSlug)
-  const fallback = (publishedPoems || []).find((poem) => toSlugKey(poem.slug) === slugKey)
-
-  return { data: fallback || null, error: null }
+  return { data: null, error: null }
 }
 
 export async function fetchPoemById(id) {
