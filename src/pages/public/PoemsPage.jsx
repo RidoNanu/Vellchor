@@ -176,8 +176,15 @@ function PoemsPage() {
 
     loadPoems()
 
+    function handleOnline() {
+      loadPoems()
+    }
+
+    window.addEventListener('online', handleOnline)
+
     return () => {
       isActive = false
+      window.removeEventListener('online', handleOnline)
     }
   }, [])
 

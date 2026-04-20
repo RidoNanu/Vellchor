@@ -48,7 +48,11 @@ function PoemDetailPage() {
   }
 
   useEffect(() => {
+    let isActive = true
+
     async function loadPoem() {
+      if (!isActive) return
+
       setLoading(true)
       setError('')
 
@@ -58,6 +62,10 @@ function PoemDetailPage() {
           10000,
           'Request timed out while loading the poem.',
         )
+
+        if (!isActive) {
+          return
+        }
 
         if (fetchError) {
           setPoem(null)
@@ -77,18 +85,37 @@ function PoemDetailPage() {
 
         // Load comments after showing the poem so a slow comments query does not block the page.
         loadComments(data.id).catch(() => {
-          setComments([])
+          if (isActive) {
+            setComments([])
+          }
         })
       } catch (loadError) {
+        if (!isActive) {
+          return
+        }
+
         setPoem(null)
         setComments([])
         setError(loadError?.message || 'Could not load poem. Please try again.')
       } finally {
-        setLoading(false)
+        if (isActive) {
+          setLoading(false)
+        }
       }
     }
 
     loadPoem()
+
+    function handleOnline() {
+      loadPoem()
+    }
+
+    window.addEventListener('online', handleOnline)
+
+    return () => {
+      isActive = false
+      window.removeEventListener('online', handleOnline)
+    }
   }, [slug])
 
   async function handleCommentSubmit(payload) {
