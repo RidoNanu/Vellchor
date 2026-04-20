@@ -9,7 +9,6 @@ export async function fetchPublishedPoems() {
     .select('id,title,preview,slug')
     .eq('published', true)
     .order('created_at', { ascending: false })
-    .limit(10)
 }
 
 export async function fetchAdminPoems() {
