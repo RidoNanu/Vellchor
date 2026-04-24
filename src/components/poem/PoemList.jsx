@@ -1,6 +1,8 @@
 import { motion, useReducedMotion } from 'framer-motion'
 import PoemCard from './PoemCard'
 
+const MotionSection = motion.section
+
 function PoemList({ poems, emptyMessage }) {
   const prefersReducedMotion = useReducedMotion()
 
@@ -29,7 +31,7 @@ function PoemList({ poems, emptyMessage }) {
   }
 
   return (
-    <motion.section
+    <MotionSection
       className="poem-list"
       aria-label="Poem list"
       initial="hidden"
@@ -40,7 +42,7 @@ function PoemList({ poems, emptyMessage }) {
       {poems.map((poem) => (
         <PoemCard key={poem.id} poem={poem} />
       ))}
-    </motion.section>
+    </MotionSection>
   )
 }
 

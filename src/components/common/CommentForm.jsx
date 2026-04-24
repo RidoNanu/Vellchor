@@ -1,5 +1,9 @@
 import { motion, useReducedMotion } from 'framer-motion'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { UI } from '../../config/constants'
+import { validateCommentInput } from '../../utils/poemValidation'
+
+const MotionButton = motion.button
 
 function CommentForm({ onSubmit, poemId }) {
   const prefersReducedMotion = useReducedMotion()
@@ -7,27 +11,56 @@ function CommentForm({ onSubmit, poemId }) {
   const [body, setBody] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState(false)
+  const successTimeoutRef = useRef(null)
+
+  useEffect(() => {
+    return () => {
+      if (successTimeoutRef.current) {
+        clearTimeout(successTimeoutRef.current)
+      }
+    }
+  }, [])
 
   async function handleSubmit(event) {
     event.preventDefault()
     setError('')
+    setSuccess(false)
 
-    if (!body.trim()) {
-      setError('Comment cannot be empty.')
+    const validation = validateCommentInput({ poem_id: poemId, name: authorName, content: body })
+
+    if (!validation.isValid) {
+      setError(validation.error.message)
       return
     }
 
     setSubmitting(true)
-    const result = await onSubmit({ poem_id: poemId, name: authorName, content: body })
 
-    if (result.error) {
-      setError(result.error.message || 'Could not add comment.')
-    } else {
+    try {
+      const result = await onSubmit(validation.values)
+
+      if (result?.error) {
+        setError(result.error.message || 'Could not add comment. Please try again.')
+        return
+      }
+
       setAuthorName('')
       setBody('')
-    }
+      setSuccess(true)
+      setError('')
 
-    setSubmitting(false)
+      if (successTimeoutRef.current) {
+        clearTimeout(successTimeoutRef.current)
+      }
+
+      successTimeoutRef.current = setTimeout(() => {
+        setSuccess(false)
+      }, UI.SUCCESS_MESSAGE_DURATION_MS)
+    } catch (err) {
+      setError(err?.message || 'Failed to post comment. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -43,6 +76,7 @@ function CommentForm({ onSubmit, poemId }) {
           value={authorName}
           onChange={(event) => setAuthorName(event.target.value)}
           placeholder="Optional"
+          disabled={submitting}
         />
       </label>
       <label>
@@ -52,11 +86,26 @@ function CommentForm({ onSubmit, poemId }) {
           onChange={(event) => setBody(event.target.value)}
           rows={3}
           placeholder="Write your thought here..."
+          disabled={submitting}
           required
+          aria-describedby={error || success ? 'comment-feedback' : undefined}
         />
       </label>
-      {error ? <p className="error-text">{error}</p> : null}
-      <motion.button
+      {error && (
+        <p className="error-text" id="comment-feedback" role="alert">
+          {error}
+        </p>
+      )}
+      {success && (
+        <p
+          className="success-text"
+          id="comment-feedback"
+          role="status"
+        >
+          Your comment has been posted. Thank you for sharing your thoughts.
+        </p>
+      )}
+      <MotionButton
         type="submit"
         disabled={submitting}
         whileHover={prefersReducedMotion || submitting ? undefined : { y: -2 }}
@@ -64,7 +113,7 @@ function CommentForm({ onSubmit, poemId }) {
         transition={{ duration: 0.2 }}
       >
         {submitting ? 'Posting...' : 'Post comment'}
-      </motion.button>
+      </MotionButton>
     </form>
   )
 }

@@ -1,10 +1,12 @@
 import { motion, useReducedMotion } from 'framer-motion'
 
+const MotionSection = motion.section
+
 function AboutPage() {
   const prefersReducedMotion = useReducedMotion()
 
   return (
-    <motion.section
+    <MotionSection
       className="about"
       initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
       whileInView={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
@@ -16,7 +18,7 @@ function AboutPage() {
         Vellichor is a poetry space by Rido Nanu, built to share moments,
         reflections, and quiet lines that stay with the reader.
       </p>
-    </motion.section>
+    </MotionSection>
   )
 }
 

@@ -1,19 +1,40 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
+import { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
+
+const MotionLink = motion.create(Link)
+const MotionNavLink = motion.create(NavLink)
+const MotionButton = motion.button
+const MotionMain = motion.main
 
 function AdminLayout() {
   const { signOut } = useAuth()
   const navigate = useNavigate()
   const prefersReducedMotion = useReducedMotion()
-  const MotionLink = motion.create(Link)
-  const MotionNavLink = motion.create(NavLink)
-  const MotionButton = motion.button
-  const MotionMain = motion.main
+  const [signOutError, setSignOutError] = useState('')
+  const [signingOut, setSigningOut] = useState(false)
 
   async function handleSignOut() {
-    await signOut()
-    navigate('/admin/login', { replace: true })
+    setSignOutError('')
+    setSigningOut(true)
+
+    try {
+      const { error } = await signOut()
+
+      if (error) {
+        navigate('/admin/login', {
+          replace: true,
+          state: { authNotice: error.message || 'Your local session has been cleared.' },
+        })
+        return
+      }
+
+      navigate('/admin/login', { replace: true, state: { notice: 'Signed out.' } })
+    } catch (err) {
+      setSignOutError(err?.message || 'An unexpected error occurred during sign out.')
+      setSigningOut(false)
+    }
   }
 
   return (
@@ -49,14 +70,22 @@ function AdminLayout() {
             type="button"
             className="ghost-button"
             onClick={handleSignOut}
-            whileHover={prefersReducedMotion ? undefined : { y: -1 }}
-            whileTap={prefersReducedMotion ? undefined : { scale: 0.98 }}
+            disabled={signingOut}
+            whileHover={prefersReducedMotion || signingOut ? undefined : { y: -1 }}
+            whileTap={prefersReducedMotion || signingOut ? undefined : { scale: 0.98 }}
             transition={{ duration: 0.2 }}
           >
-            Sign out
+            {signingOut ? 'Signing out...' : 'Sign out'}
           </MotionButton>
         </nav>
       </header>
+
+      {signOutError && (
+        <div style={{ padding: '1rem', backgroundColor: '#fee', borderBottom: '1px solid #fcc' }}>
+          <p className="error-text">{signOutError}</p>
+        </div>
+      )}
+
       <MotionMain
         initial={prefersReducedMotion ? undefined : { opacity: 0, y: 8 }}
         animate={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}

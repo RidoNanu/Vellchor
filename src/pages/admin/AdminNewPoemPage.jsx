@@ -3,6 +3,8 @@ import { motion, useReducedMotion } from 'framer-motion'
 import PoemForm from '../../components/admin/PoemForm'
 import { createPoem } from '../../services/poemService'
 
+const MotionSection = motion.section
+
 function AdminNewPoemPage() {
   const navigate = useNavigate()
   const prefersReducedMotion = useReducedMotion()
@@ -11,14 +13,14 @@ function AdminNewPoemPage() {
     const result = await createPoem(values)
 
     if (!result.error) {
-      navigate('/admin/dashboard')
+      navigate('/admin/dashboard', { state: { notice: 'Poem created.' } })
     }
 
     return result
   }
 
   return (
-    <motion.section
+    <MotionSection
       initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
       whileInView={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.12 }}
@@ -26,7 +28,7 @@ function AdminNewPoemPage() {
     >
       <h1>New Poem</h1>
       <PoemForm onSubmit={handleCreate} submitLabel="Create poem" />
-    </motion.section>
+    </MotionSection>
   )
 }
 

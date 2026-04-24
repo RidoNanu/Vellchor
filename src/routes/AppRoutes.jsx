@@ -13,10 +13,26 @@ import AdminEditPoemPage from '../pages/admin/AdminEditPoemPage'
 import { useAuth } from '../hooks/useAuth'
 
 function AdminEntryRoute() {
-  const { user, loading } = useAuth()
+  const { user, loading, error, refreshSession } = useAuth()
+
+  if (error) {
+    return (
+      <div className="auth-state-container">
+        <p className="error-text">Authentication error: {error}</p>
+        <button type="button" onClick={() => refreshSession({ force: true })}>
+          Check again
+        </button>
+        <a href="/admin/login">Try logging in again</a>
+      </div>
+    )
+  }
 
   if (loading) {
-    return <p className="status-text">Checking session...</p>
+    return (
+      <div className="auth-state-container">
+        <p className="status-text">Checking session...</p>
+      </div>
+    )
   }
 
   if (!user) {

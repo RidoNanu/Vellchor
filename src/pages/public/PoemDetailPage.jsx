@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useParams, useLocation } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
 import PoemViewer from '../../components/poem/PoemViewer'
 import CommentList from '../../components/common/CommentList'
@@ -9,23 +9,30 @@ import {
   fetchCommentsByPoemId,
   fetchPoemBySlug,
 } from '../../services/poemService'
+import { TIMEOUTS } from '../../config/constants'
+import { wait } from '../../utils/request'
+import { useViewTracker } from '../../hooks/useViewTracker'
+import { PoemDetailSkeleton } from '../../components/common/Skeletons'
+
+const MotionSection = motion.section
+const MotionDiv = motion.div
 
 function PoemDetailPage() {
   const { slug } = useParams()
+  const location = useLocation()
+  const poemState = location.state?.poem
   const prefersReducedMotion = useReducedMotion()
   const [poem, setPoem] = useState(null)
   const [comments, setComments] = useState([])
   const [loading, setLoading] = useState(true)
+  const [commentsLoading, setCommentsLoading] = useState(false)
   const [error, setError] = useState('')
+  const [commentsError, setCommentsError] = useState('')
+  const mountedRef = useRef(false)
+  const poemRequestIdRef = useRef(0)
+  const commentsRequestIdRef = useRef(0)
 
-  function withTimeout(promise, ms, message) {
-    return Promise.race([
-      promise,
-      new Promise((_, reject) => {
-        setTimeout(() => reject(new Error(message)), ms)
-      }),
-    ])
-  }
+  useViewTracker(poem?.id)
 
   const sectionVariants = {
     hidden: {
@@ -42,114 +49,165 @@ function PoemDetailPage() {
     },
   }
 
-  async function loadComments(poemId) {
-    const { data } = await fetchCommentsByPoemId(poemId)
-    setComments(data || [])
-  }
+  const loadComments = useCallback(async (poemId, { showLoader = true } = {}) => {
+    const currentRequestId = commentsRequestIdRef.current + 1
+    commentsRequestIdRef.current = currentRequestId
 
-  useEffect(() => {
-    let isActive = true
+    if (showLoader) {
+      setCommentsLoading(true)
+    }
+    setCommentsError('')
 
-    async function loadPoem() {
-      if (!isActive) return
+    try {
+      const { data, error: fetchError } = await fetchCommentsByPoemId(poemId)
 
-      setLoading(true)
-      setError('')
+      if (!mountedRef.current || currentRequestId !== commentsRequestIdRef.current) {
+        return
+      }
 
-      try {
-        const { data, error: fetchError } = await withTimeout(
-          fetchPoemBySlug(slug),
-          10000,
-          'Request timed out while loading the poem.',
-        )
-
-        if (!isActive) {
-          return
-        }
-
-        if (fetchError) {
-          setPoem(null)
-          setComments([])
-          setError(fetchError.message)
-          return
-        }
-
-        if (!data) {
-          setPoem(null)
-          setComments([])
-          setError('Poem not found or not published.')
-          return
-        }
-
-        setPoem(data)
-
-        // Load comments after showing the poem so a slow comments query does not block the page.
-        loadComments(data.id).catch(() => {
-          if (isActive) {
-            setComments([])
-          }
-        })
-      } catch (loadError) {
-        if (!isActive) {
-          return
-        }
-
-        setPoem(null)
+      if (fetchError) {
         setComments([])
-        setError(loadError?.message || 'Could not load poem. Please try again.')
-      } finally {
-        if (isActive) {
-          setLoading(false)
-        }
+        setCommentsError(fetchError.message || 'Could not load comments. Please try again.')
+        return
+      }
+
+      setComments(data || [])
+      setCommentsError('')
+    } catch (loadError) {
+      if (!mountedRef.current || currentRequestId !== commentsRequestIdRef.current) {
+        return
+      }
+
+      setComments([])
+      setCommentsError(loadError?.message || 'Could not load comments. Please try again.')
+    } finally {
+      if (mountedRef.current && currentRequestId === commentsRequestIdRef.current) {
+        setCommentsLoading(false)
       }
     }
+  }, [])
 
+  const loadPoem = useCallback(async () => {
+    const currentRequestId = poemRequestIdRef.current + 1
+    poemRequestIdRef.current = currentRequestId
+
+    setLoading(true)
+    setCommentsLoading(true)
+    setError('')
+    setCommentsError('')
+
+    try {
+      const { data, error: fetchError } = await fetchPoemBySlug(slug)
+
+      if (!mountedRef.current || currentRequestId !== poemRequestIdRef.current) {
+        return
+      }
+
+      if (fetchError) {
+        setPoem(null)
+        setComments([])
+        setCommentsLoading(false)
+        setError(fetchError.message || 'Could not load poem. Please try again.')
+        return
+      }
+
+      if (!data) {
+        setPoem(null)
+        setComments([])
+        setCommentsLoading(false)
+        setError('Poem not found or not published.')
+        return
+      }
+
+      setPoem(data)
+      setError('')
+      loadComments(data.id)
+    } catch (loadError) {
+      if (!mountedRef.current || currentRequestId !== poemRequestIdRef.current) {
+        return
+      }
+
+      setPoem(null)
+      setComments([])
+      setCommentsLoading(false)
+      setError(loadError?.message || 'Could not load poem. Please try again.')
+    } finally {
+      if (mountedRef.current && currentRequestId === poemRequestIdRef.current) {
+        setLoading(false)
+      }
+    }
+  }, [loadComments, slug])
+
+  useEffect(() => {
+    mountedRef.current = true
     loadPoem()
 
-    function handleOnline() {
-      loadPoem()
+    async function handleOnline() {
+      await wait(TIMEOUTS.ONLINE_RECOVERY_DELAY_MS)
+      if (mountedRef.current) {
+        loadPoem()
+      }
     }
 
     window.addEventListener('online', handleOnline)
 
     return () => {
-      isActive = false
+      mountedRef.current = false
       window.removeEventListener('online', handleOnline)
     }
-  }, [slug])
+  }, [loadPoem])
 
   async function handleCommentSubmit(payload) {
     const result = await addComment(payload)
 
     if (!result.error) {
-      await loadComments(payload.poem_id)
+      await loadComments(payload.poem_id, { showLoader: false })
     }
 
     return result
   }
 
   return (
-    <motion.section
+    <MotionSection
       initial={prefersReducedMotion ? false : 'hidden'}
       animate={prefersReducedMotion ? undefined : 'visible'}
       variants={sectionVariants}
     >
-      {loading ? <p className="status-text">Loading poem...</p> : null}
-      {error ? <p className="error-text">{error}</p> : null}
+      {loading ? <PoemDetailSkeleton /> : null}
+      {error ? (
+        <div className="feedback-panel">
+          <p className="error-text">{error}</p>
+          <button type="button" onClick={loadPoem}>
+            Try again
+          </button>
+        </div>
+      ) : null}
       {!loading && !error && poem ? (
         <>
-          <motion.div variants={sectionVariants}>
+          <MotionDiv variants={sectionVariants}>
             <PoemViewer poem={poem} />
-          </motion.div>
-          <motion.div variants={sectionVariants}>
+          </MotionDiv>
+          <MotionDiv variants={sectionVariants}>
             <CommentForm poemId={poem.id} onSubmit={handleCommentSubmit} />
-          </motion.div>
-          <motion.div variants={sectionVariants}>
-            <CommentList comments={comments} />
-          </motion.div>
+          </MotionDiv>
+          <MotionDiv variants={sectionVariants}>
+            {commentsLoading ? (
+              <p className="status-text">Loading comments...</p>
+            ) : (
+              <CommentList comments={comments} />
+            )}
+            {commentsError ? (
+              <div className="feedback-panel">
+                <p className="error-text">{commentsError}</p>
+                <button type="button" onClick={() => loadComments(poem.id)}>
+                  Reload comments
+                </button>
+              </div>
+            ) : null}
+          </MotionDiv>
         </>
       ) : null}
-    </motion.section>
+    </MotionSection>
   )
 }
 

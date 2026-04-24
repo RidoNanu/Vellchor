@@ -1,5 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
+import { buildPreviewFromContent, normalizeSlug, validatePoemInput } from '../../utils/poemValidation'
+
+const MotionButton = motion.button
 
 const initialState = {
   title: '',
@@ -9,30 +12,36 @@ const initialState = {
   published: false,
 }
 
+function getInitialFormData(defaultValues) {
+  return {
+    ...initialState,
+    ...defaultValues,
+    published: Boolean(defaultValues?.published),
+  }
+}
+
 function PoemForm({ defaultValues = initialState, onSubmit, submitLabel = 'Save poem' }) {
-  const [formData, setFormData] = useState(defaultValues)
-  const [previewTouched, setPreviewTouched] = useState(false)
+  const [formData, setFormData] = useState(() => getInitialFormData(defaultValues))
+  const [previewTouched, setPreviewTouched] = useState(Boolean(defaultValues.preview?.trim()))
   const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState('')
+  const [formError, setFormError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState({})
   const prefersReducedMotion = useReducedMotion()
 
-  function buildPreviewFromContent(content = '') {
-    const lines = content
-      .split('\n')
-      .map((line) => line.trim())
-      .filter(Boolean)
-
-    return lines.slice(0, 2).join('\n')
-  }
+  const generatedSlug = useMemo(
+    () => normalizeSlug(formData.slug || formData.title),
+    [formData.slug, formData.title],
+  )
 
   useEffect(() => {
-    setFormData(defaultValues)
+    setFormData(getInitialFormData(defaultValues))
     setPreviewTouched(Boolean(defaultValues.preview?.trim()))
+    setFormError('')
+    setFieldErrors({})
   }, [defaultValues])
 
   useEffect(() => {
-    if (previewTouched) return
-    if (!formData.title.trim()) return
+    if (previewTouched || !formData.title.trim()) return
 
     const generatedPreview = buildPreviewFromContent(formData.content)
     if (!generatedPreview) return
@@ -45,32 +54,53 @@ function PoemForm({ defaultValues = initialState, onSubmit, submitLabel = 'Save 
 
   function updateField(field, value) {
     setFormData((prev) => ({ ...prev, [field]: value }))
+    setFieldErrors((prev) => {
+      if (!prev[field]) return prev
+      const next = { ...prev }
+      delete next[field]
+      return next
+    })
+    setFormError('')
   }
 
   async function handleSubmit(event) {
     event.preventDefault()
-    setError('')
+    setFormError('')
+    setFieldErrors({})
+
+    const validation = validatePoemInput({
+      ...formData,
+      slug: generatedSlug,
+      preview: formData.preview.trim() || buildPreviewFromContent(formData.content),
+    })
+
+    if (!validation.isValid) {
+      setFieldErrors(validation.fieldErrors)
+      setFormError(validation.error.message)
+      return
+    }
+
     setSubmitting(true)
 
-    const payload = {
-      ...formData,
-      slug: formData.slug.trim() || formData.title.toLowerCase().replace(/\s+/g, '-'),
-      preview: formData.preview.trim() || buildPreviewFromContent(formData.content),
+    try {
+      const result = await onSubmit(validation.values)
+
+      if (result?.error) {
+        setFieldErrors(result.fieldErrors || {})
+        setFormError(result.error.message || 'Save failed. Please try again.')
+        return
+      }
+    } catch (error) {
+      setFormError(error?.message || 'Save failed. Please try again.')
+    } finally {
+      setSubmitting(false)
     }
-
-    const result = await onSubmit(payload)
-
-    if (result?.error) {
-      setError(result.error.message || 'Save failed.')
-    }
-
-    setSubmitting(false)
   }
 
   return (
-    <form className="poem-form" onSubmit={handleSubmit}>
+    <form className="poem-form" onSubmit={handleSubmit} noValidate>
       <div className="poem-form-header">
-        <h2>{formData.title ? 'Edit poem' : 'Write a new poem'}</h2>
+        <h2>{formData.id ? 'Edit poem' : 'Write a new poem'}</h2>
         <p>
           Keep the preview short and clear. The full poem can breathe below it, and the slug will
           generate automatically if left blank.
@@ -85,15 +115,32 @@ function PoemForm({ defaultValues = initialState, onSubmit, submitLabel = 'Save 
             onChange={(event) => updateField('title', event.target.value)}
             placeholder="A clear title for the poem"
             required
+            aria-invalid={Boolean(fieldErrors.title)}
+            aria-describedby={fieldErrors.title ? 'poem-title-error' : undefined}
+            disabled={submitting}
           />
+          {fieldErrors.title ? (
+            <span className="field-error" id="poem-title-error">
+              {fieldErrors.title}
+            </span>
+          ) : null}
         </label>
         <label>
           Slug
           <input
             value={formData.slug}
             onChange={(event) => updateField('slug', event.target.value)}
-            placeholder="auto-generated if empty"
+            placeholder={generatedSlug || 'auto-generated if empty'}
+            aria-invalid={Boolean(fieldErrors.slug)}
+            aria-describedby={fieldErrors.slug ? 'poem-slug-error' : 'poem-slug-help'}
+            disabled={submitting}
           />
+
+          {fieldErrors.slug ? (
+            <span className="field-error" id="poem-slug-error">
+              {fieldErrors.slug}
+            </span>
+          ) : null}
         </label>
       </div>
 
@@ -108,7 +155,15 @@ function PoemForm({ defaultValues = initialState, onSubmit, submitLabel = 'Save 
           }}
           placeholder="A short excerpt shown on the poems page"
           required
+          aria-invalid={Boolean(fieldErrors.preview)}
+          aria-describedby={fieldErrors.preview ? 'poem-preview-error' : undefined}
+          disabled={submitting}
         />
+        {fieldErrors.preview ? (
+          <span className="field-error" id="poem-preview-error">
+            {fieldErrors.preview}
+          </span>
+        ) : null}
       </label>
       <label>
         Poem
@@ -118,21 +173,34 @@ function PoemForm({ defaultValues = initialState, onSubmit, submitLabel = 'Save 
           onChange={(event) => updateField('content', event.target.value)}
           placeholder="Write the full poem here"
           required
+          aria-invalid={Boolean(fieldErrors.content)}
+          aria-describedby={fieldErrors.content ? 'poem-content-error' : undefined}
+          disabled={submitting}
         />
+        {fieldErrors.content ? (
+          <span className="field-error" id="poem-content-error">
+            {fieldErrors.content}
+          </span>
+        ) : null}
       </label>
       <label className="checkbox-row checkbox-card">
         <input
           type="checkbox"
           checked={formData.published}
           onChange={(event) => updateField('published', event.target.checked)}
+          disabled={submitting}
         />
         <span>
           <strong>Published</strong>
           <small>Visible on the public site when enabled</small>
         </span>
       </label>
-      {error ? <p className="error-text">{error}</p> : null}
-      <motion.button
+      {formError ? (
+        <p className="error-text" role="alert">
+          {formError}
+        </p>
+      ) : null}
+      <MotionButton
         className="poem-form-submit"
         type="submit"
         disabled={submitting}
@@ -141,7 +209,7 @@ function PoemForm({ defaultValues = initialState, onSubmit, submitLabel = 'Save 
         transition={{ duration: 0.2 }}
       >
         {submitting ? 'Saving...' : submitLabel}
-      </motion.button>
+      </MotionButton>
     </form>
   )
 }

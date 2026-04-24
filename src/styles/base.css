@@ -44,3 +44,234 @@ textarea {
   font: inherit;
   color: inherit;
 }
+
+.error-text {
+  color: #ffb4b4;
+  margin: 0;
+}
+
+.success-text {
+  color: #92e6bd;
+  margin: 0;
+}
+
+.field-error {
+  color: #ffb4b4;
+  font-size: 0.85rem;
+}
+
+.field-hint {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.feedback-panel,
+.auth-state-container {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: var(--space-2);
+  padding: 1rem;
+}
+
+.feedback-panel button,
+.auth-state-container button,
+.auth-state-container a {
+  justify-self: start;
+}
+
+.auth-state-container {
+  margin: var(--space-4) auto;
+  max-width: 36rem;
+  text-align: center;
+}
+
+.auth-state-container button,
+.auth-state-container a {
+  justify-self: center;
+}
+
+.success-panel {
+  border-color: rgba(146, 230, 189, 0.34);
+}
+
+.app-error-boundary {
+  align-items: center;
+  background: var(--bg);
+  display: grid;
+  min-height: 100vh;
+  padding: 1.25rem;
+}
+
+.app-error-boundary-panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.24);
+  display: grid;
+  gap: 1rem;
+  margin: 0 auto;
+  max-width: 42rem;
+  padding: clamp(1.2rem, 4vw, 2rem);
+  width: 100%;
+}
+
+.app-error-boundary-panel h1 {
+  margin-bottom: 0;
+}
+
+.app-error-boundary-panel details {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.85rem;
+}
+
+.app-error-boundary-panel summary {
+  cursor: pointer;
+}
+
+.app-error-boundary-panel pre {
+  color: #ffb4b4;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.86rem;
+  line-height: 1.6;
+  margin-top: 0.75rem;
+  max-height: 12rem;
+  overflow: auto;
+}
+
+.app-error-boundary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.app-error-boundary-actions a {
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  display: inline-flex;
+  justify-content: center;
+  min-height: 2.9rem;
+  padding: 0.75rem 1rem;
+  text-decoration: none;
+}
+
+.skeleton-line {
+  --skeleton-base: rgba(255, 255, 255, 0.16);
+  --skeleton-highlight: rgba(255, 255, 255, 0.34);
+  animation: skeleton-shimmer 1.35s linear infinite;
+  background: linear-gradient(
+    90deg,
+    var(--skeleton-base) 0%,
+    var(--skeleton-base) 35%,
+    var(--skeleton-highlight) 50%,
+    var(--skeleton-base) 65%,
+    var(--skeleton-base) 100%
+  );
+  background-size: 220% 100%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  display: block;
+  height: 0.78rem;
+}
+
+.skeleton-title {
+  height: 1.25rem;
+}
+
+.skeleton-input {
+  border-radius: 12px;
+  height: 2.8rem;
+}
+
+.skeleton-textarea {
+  height: 8.5rem;
+}
+
+.skeleton-textarea-short {
+  height: 6.2rem;
+}
+
+.skeleton-button {
+  border-radius: 999px;
+  height: 2.5rem;
+}
+
+.skeleton-chip {
+  border-radius: 999px;
+  height: 2.2rem;
+}
+
+.skeleton-label-group {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.admin-dashboard-skeleton {
+  display: grid;
+  gap: 1rem;
+}
+
+.admin-stats-skeleton article {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.admin-filters-skeleton {
+  pointer-events: none;
+}
+
+.admin-filters-skeleton .admin-filter {
+  gap: 0.55rem;
+}
+
+.dashboard-list-skeleton li {
+  align-items: center;
+}
+
+.admin-form-skeleton .poem-form {
+  display: grid;
+  gap: 0.8rem;
+  margin: var(--space-3) auto;
+  max-width: 720px;
+}
+
+.admin-form-skeleton .poem-form-grid {
+  margin: 0;
+}
+
+.skeleton-checkbox-card {
+  display: flex;
+}
+
+.skeleton-checkbox {
+  border-radius: 5px;
+  flex-shrink: 0;
+  height: 1.1rem;
+  margin-top: 0.1rem;
+  width: 1.1rem;
+}
+
+.skeleton-checkbox-copy {
+  display: grid;
+  gap: 0.35rem;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -20% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-line {
+    animation: none;
+  }
+}

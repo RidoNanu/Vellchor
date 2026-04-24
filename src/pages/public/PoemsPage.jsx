@@ -1,7 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import PoemList from '../../components/poem/PoemList'
+import { PoemListSkeleton } from '../../components/common/Skeletons'
+import ToolbarDropdown from '../../components/common/ToolbarDropdown'
+import { TIMEOUTS } from '../../config/constants'
 import { fetchPublishedPoems } from '../../services/poemService'
+import { wait } from '../../utils/request'
+
+const MotionSection = motion.section
 
 const POEMS_CACHE_KEY = 'vellichor:poems:list:v1'
 
@@ -26,10 +32,10 @@ function writePoemsCache(poems) {
 }
 
 const readingModeOptions = [
-  { value: 'all', label: 'All poems' },
-  { value: 'short', label: 'Short reads' },
-  { value: 'medium', label: 'Balanced reads' },
-  { value: 'long', label: 'Long reads' },
+  { value: 'all', label: 'All lengths' },
+  { value: 'short', label: 'Short (< 10 lines)' },
+  { value: 'medium', label: 'Medium (10 - 30 lines)' },
+  { value: 'long', label: 'Long (> 30 lines)' },
 ]
 
 const sortOptions = [
@@ -37,156 +43,98 @@ const sortOptions = [
   { value: 'oldest', label: 'Oldest first' },
   { value: 'title-asc', label: 'Title A-Z' },
   { value: 'title-desc', label: 'Title Z-A' },
-  { value: 'shortest', label: 'Shortest first' },
-  { value: 'longest', label: 'Longest first' },
 ]
 
-function ToolbarDropdown({ label, value, options, onChange, dropdownKey, activeMenu, setActiveMenu }) {
-  const containerRef = useRef(null)
-  const activeOption = options.find((option) => option.value === value) ?? options[0]
 
-  useEffect(() => {
-    function handlePointerDown(event) {
-      if (containerRef.current && !containerRef.current.contains(event.target)) {
-        setActiveMenu(null)
-      }
-    }
-
-    function handleEscape(event) {
-      if (event.key === 'Escape') {
-        setActiveMenu(null)
-      }
-    }
-
-    if (activeMenu === dropdownKey) {
-      document.addEventListener('pointerdown', handlePointerDown)
-      document.addEventListener('keydown', handleEscape)
-    }
-
-    return () => {
-      document.removeEventListener('pointerdown', handlePointerDown)
-      document.removeEventListener('keydown', handleEscape)
-    }
-  }, [activeMenu, dropdownKey, setActiveMenu])
-
-  return (
-    <div className="poems-dropdown" ref={containerRef}>
-      <span>{label}</span>
-      <button
-        type="button"
-        className="poems-dropdown-trigger"
-        aria-haspopup="listbox"
-        aria-expanded={activeMenu === dropdownKey}
-        onClick={() =>
-          setActiveMenu((current) => (current === dropdownKey ? null : dropdownKey))
-        }
-      >
-        <span>{activeOption.label}</span>
-      </button>
-      {activeMenu === dropdownKey ? (
-        <ul className="poems-dropdown-menu" role="listbox" aria-label={label}>
-          {options.map((option) => (
-            <li key={option.value}>
-              <button
-                type="button"
-                className={option.value === value ? 'is-active' : ''}
-                aria-selected={option.value === value}
-                onClick={() => {
-                  onChange(option.value)
-                  setActiveMenu(null)
-                }}
-              >
-                {option.label}
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-    </div>
-  )
-}
 
 function PoemsPage() {
   const prefersReducedMotion = useReducedMotion()
   const [poems, setPoems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [retrying, setRetrying] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [readingMode, setReadingMode] = useState('all')
   const [sortMode, setSortMode] = useState('newest')
   const [activeMenu, setActiveMenu] = useState(null)
+  const mountedRef = useRef(false)
+  const requestIdRef = useRef(0)
 
-  useEffect(() => {
-    let isActive = true
+  const loadPoems = useCallback(async ({ isRetry = false, useCache = false } = {}) => {
+    const currentRequestId = requestIdRef.current + 1
+    requestIdRef.current = currentRequestId
 
-    async function loadPoems() {
-      setError('')
+    setError('')
 
+    if (isRetry) {
+      setRetrying(true)
+    } else if (useCache) {
       const cachedPoems = readPoemsCache()
-      if (cachedPoems.length && isActive) {
+      if (cachedPoems.length) {
         setPoems(cachedPoems)
         setLoading(false)
-      } else if (isActive) {
+      } else {
         setLoading(true)
       }
+    } else {
+      setLoading(true)
+    }
 
-      try {
-        console.time('fetch')
-        const { data, error: fetchError } = await fetchPublishedPoems()
+    try {
+      const { data, error: fetchError } = await fetchPublishedPoems()
 
-        if (!isActive) {
-          return
-        }
+      if (!mountedRef.current || currentRequestId !== requestIdRef.current) {
+        return
+      }
 
-        if (fetchError) {
-          if (!cachedPoems.length) {
-            setPoems([])
-          }
-          setError(fetchError.message)
-          return
-        }
-
-        const freshPoems = data || []
-        setPoems(freshPoems)
-        writePoemsCache(freshPoems)
-      } catch (loadError) {
-        if (!isActive) {
-          return
-        }
-
-        const message = loadError?.message || ''
-        const isAbortLikeError =
-          loadError?.name === 'AbortError' || message.toLowerCase().includes('lock broken')
-
-        if (isAbortLikeError) {
-          return
-        }
-
+      if (fetchError) {
+        const cachedPoems = readPoemsCache()
         if (!cachedPoems.length) {
           setPoems([])
         }
-        setError(message || 'Could not load poems. Please try again.')
-      } finally {
-        console.timeEnd('fetch')
-        if (isActive) {
-          setLoading(false)
-        }
+        setError(fetchError.message || 'Could not load poems. Please try again.')
+        return
+      }
+
+      const freshPoems = data || []
+      setPoems(freshPoems)
+      writePoemsCache(freshPoems)
+    } catch (loadError) {
+      if (!mountedRef.current || currentRequestId !== requestIdRef.current) {
+        return
+      }
+
+      const cachedPoems = readPoemsCache()
+      if (!cachedPoems.length) {
+        setPoems([])
+      }
+      setError(loadError?.message || 'Could not load poems. Please try again.')
+    } finally {
+      if (mountedRef.current && currentRequestId === requestIdRef.current) {
+        setLoading(false)
+        setRetrying(false)
       }
     }
+  }, [])
 
-    loadPoems()
+  useEffect(() => {
+    mountedRef.current = true
+    loadPoems({ useCache: true })
 
-    function handleOnline() {
-      loadPoems()
+    async function handleOnline() {
+      await wait(TIMEOUTS.ONLINE_RECOVERY_DELAY_MS)
+      if (mountedRef.current) {
+        loadPoems()
+      }
     }
 
     window.addEventListener('online', handleOnline)
 
     return () => {
-      isActive = false
+      mountedRef.current = false
       window.removeEventListener('online', handleOnline)
     }
-  }, [])
+  }, [loadPoems])
 
   const filteredPoems = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase()
@@ -195,12 +143,12 @@ function PoemsPage() {
       const content = `${poem.title ?? ''} ${poem.preview ?? ''} ${poem.slug ?? ''}`.toLowerCase()
       const matchesSearch = !normalizedSearch || content.includes(normalizedSearch)
 
-      const bodyLength = (poem.preview || '').trim().length
+      const lineCount = (poem.content || '').split('\n').length
       const matchesReadingMode =
         readingMode === 'all' ||
-        (readingMode === 'short' && bodyLength < 500) ||
-        (readingMode === 'medium' && bodyLength >= 500 && bodyLength < 1200) ||
-        (readingMode === 'long' && bodyLength >= 1200)
+        (readingMode === 'short' && lineCount < 10) ||
+        (readingMode === 'medium' && lineCount >= 10 && lineCount <= 30) ||
+        (readingMode === 'long' && lineCount > 30)
 
       return matchesSearch && matchesReadingMode
     })
@@ -228,10 +176,9 @@ function PoemsPage() {
   const hasFilters = searchTerm.trim().length > 0 || readingMode !== 'all' || sortMode !== 'newest'
 
   return (
-    <motion.section
+    <MotionSection
       initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
-      whileInView={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.15 }}
+      animate={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
       transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
     >
       <h1 className="page-title">Poems</h1>
@@ -270,8 +217,19 @@ function PoemsPage() {
           {hasFilters ? ' after filtering' : ''}
         </p>
       ) : null}
-      {loading ? <p className="status-text">Loading poems...</p> : null}
-      {error ? <p className="error-text">{error}</p> : null}
+      {loading ? <PoemListSkeleton count={6} /> : null}
+      {error ? (
+        <div className="feedback-panel">
+          <p className="error-text">{error}</p>
+          <button
+            type="button"
+            onClick={() => loadPoems({ isRetry: true })}
+            disabled={retrying}
+          >
+            {retrying ? 'Retrying...' : 'Try again'}
+          </button>
+        </div>
+      ) : null}
       {!loading && !error ? (
         <PoemList
           poems={filteredPoems}
@@ -282,7 +240,7 @@ function PoemsPage() {
           }
         />
       ) : null}
-    </motion.section>
+    </MotionSection>
   )
 }
 

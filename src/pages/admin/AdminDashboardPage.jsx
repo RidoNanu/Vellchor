@@ -1,16 +1,37 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
 import DashboardList from '../../components/admin/DashboardList'
+import { AdminDashboardSkeleton } from '../../components/common/Skeletons'
+import ToolbarDropdown from '../../components/common/ToolbarDropdown'
+import { UI, TIMEOUTS } from '../../config/constants'
 import { formatDate } from '../../utils/text'
+import { wait } from '../../utils/request'
 import { deletePoem, fetchAdminPoems } from '../../services/poemService'
 
+const MotionArticle = motion.article
+const MotionButton = motion.button
+const MotionDiv = motion.div
+const MotionH1 = motion.h1
+const MotionP = motion.p
+const MotionSection = motion.section
+
 function AdminDashboardPage() {
+  const location = useLocation()
+  const navigate = useNavigate()
   const [poems, setPoems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState(location.state?.notice || '')
+  const [retrying, setRetrying] = useState(false)
+  const [deletingId, setDeletingId] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [visibilityFilter, setVisibilityFilter] = useState('all')
   const [sortMode, setSortMode] = useState('updated-desc')
+  const [activeMenu, setActiveMenu] = useState(null)
+  const mountedRef = useRef(false)
+  const requestIdRef = useRef(0)
+  const successTimeoutRef = useRef(null)
   const prefersReducedMotion = useReducedMotion()
 
   const containerVariants = {
@@ -18,11 +39,11 @@ function AdminDashboardPage() {
     visible: prefersReducedMotion
       ? {}
       : {
-          transition: {
-            staggerChildren: 0.07,
-            delayChildren: 0.04,
-          },
+        transition: {
+          staggerChildren: 0.07,
+          delayChildren: 0.04,
         },
+      },
   }
 
   const fadeUpVariants = {
@@ -40,29 +61,110 @@ function AdminDashboardPage() {
     },
   }
 
-  async function loadPoems() {
-    const { data, error: fetchError } = await fetchAdminPoems()
+  const showSuccess = useCallback((message) => {
+    setSuccess(message)
 
-    if (fetchError) {
-      setError(fetchError.message)
-    } else {
-      setPoems(data || [])
+    if (successTimeoutRef.current) {
+      window.clearTimeout(successTimeoutRef.current)
     }
 
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    loadPoems()
+    successTimeoutRef.current = window.setTimeout(() => {
+      if (mountedRef.current) {
+        setSuccess('')
+      }
+    }, UI.SUCCESS_MESSAGE_DURATION_MS)
   }, [])
 
-  async function handleDelete(id) {
-    const { error: deleteError } = await deletePoem(id)
-    if (deleteError) {
-      setError(deleteError.message)
-      return
+  const loadPoems = useCallback(async ({ isRetry = false } = {}) => {
+    const currentRequestId = requestIdRef.current + 1
+    requestIdRef.current = currentRequestId
+
+    if (isRetry) {
+      setRetrying(true)
+    } else {
+      setLoading(true)
     }
-    await loadPoems()
+    setError('')
+
+    try {
+      const { data, error: fetchError } = await fetchAdminPoems()
+
+      if (!mountedRef.current || currentRequestId !== requestIdRef.current) {
+        return
+      }
+
+      if (fetchError) {
+        setPoems([])
+        setError(fetchError.message || 'Could not load poems. Please try again.')
+        return
+      }
+
+      setPoems(data || [])
+    } catch (loadError) {
+      if (!mountedRef.current || currentRequestId !== requestIdRef.current) {
+        return
+      }
+
+      setPoems([])
+      setError(loadError?.message || 'Could not load poems. Please try again.')
+    } finally {
+      if (mountedRef.current && currentRequestId === requestIdRef.current) {
+        setLoading(false)
+        setRetrying(false)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    mountedRef.current = true
+    loadPoems()
+
+    async function handleOnline() {
+      await wait(TIMEOUTS.ONLINE_RECOVERY_DELAY_MS)
+      if (mountedRef.current) {
+        loadPoems()
+      }
+    }
+
+    window.addEventListener('online', handleOnline)
+
+    return () => {
+      mountedRef.current = false
+      if (successTimeoutRef.current) {
+        window.clearTimeout(successTimeoutRef.current)
+      }
+      window.removeEventListener('online', handleOnline)
+    }
+  }, [loadPoems])
+
+  useEffect(() => {
+    if (!location.state?.notice) return
+
+    showSuccess(location.state.notice)
+    navigate(location.pathname, { replace: true, state: null })
+  }, [location.pathname, location.state, navigate, showSuccess])
+
+  async function handleDelete(id) {
+    setError('')
+    setSuccess('')
+    setDeletingId(id)
+
+    try {
+      const { error: deleteError } = await deletePoem(id)
+      if (deleteError) {
+        setError(deleteError.message || 'Could not delete poem. Please try again.')
+        return
+      }
+
+      setPoems((prev) => prev.filter((poem) => poem.id !== id))
+      showSuccess('Poem deleted.')
+    } catch (deleteRequestError) {
+      setError(deleteRequestError?.message || 'Delete failed. Please try again.')
+    } finally {
+      if (mountedRef.current) {
+        setDeletingId('')
+      }
+    }
   }
 
   const filteredPoems = useMemo(() => {
@@ -89,6 +191,10 @@ function AdminDashboardPage() {
           return (firstPoem.title || '').localeCompare(secondPoem.title || '')
         case 'title-desc':
           return (secondPoem.title || '').localeCompare(firstPoem.title || '')
+        case 'views-desc':
+          return (secondPoem.views || 0) - (firstPoem.views || 0)
+        case 'views-asc':
+          return (firstPoem.views || 0) - (secondPoem.views || 0)
         case 'updated-desc':
         default:
           return new Date(secondPoem.updated_at || secondPoem.created_at || 0) -
@@ -102,26 +208,47 @@ function AdminDashboardPage() {
     searchTerm.trim().length > 0 || visibilityFilter !== 'all' || sortMode !== 'updated-desc'
 
   return (
-    <motion.section
+    <MotionSection
       className="admin-page"
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, amount: 0.12 }}
       variants={containerVariants}
     >
-      <motion.h1 variants={fadeUpVariants}>Dashboard</motion.h1>
-      <motion.div className="admin-stats" variants={containerVariants}>
-        <motion.article variants={fadeUpVariants}>
+      <MotionH1 variants={fadeUpVariants}>Dashboard</MotionH1>
+      <MotionDiv className="admin-stats" variants={containerVariants}>
+        <MotionArticle variants={fadeUpVariants}>
           <span>Total poems</span>
           <strong>{poems.length}</strong>
-        </motion.article>
-        <motion.article variants={fadeUpVariants}>
+        </MotionArticle>
+        <MotionArticle variants={fadeUpVariants}>
           <span>Latest update</span>
-          <strong>{latestUpdatedAt ? formatDate(latestUpdatedAt) : '—'}</strong>
-        </motion.article>
-      </motion.div>
+          <strong>{latestUpdatedAt ? formatDate(latestUpdatedAt) : '-'}</strong>
+        </MotionArticle>
+      </MotionDiv>
 
-      <motion.div className="admin-filters" variants={fadeUpVariants}>
+      {success ? (
+        <MotionDiv className="feedback-panel success-panel" variants={fadeUpVariants} role="status">
+          <p className="success-text">{success}</p>
+        </MotionDiv>
+      ) : null}
+
+      {error ? (
+        <MotionDiv className="feedback-panel" variants={fadeUpVariants}>
+          <p className="error-text">{error}</p>
+          <MotionButton
+            type="button"
+            onClick={() => loadPoems({ isRetry: true })}
+            disabled={retrying}
+            whileHover={retrying ? undefined : { y: -1 }}
+            whileTap={retrying ? undefined : { scale: 0.98 }}
+          >
+            {retrying ? 'Retrying...' : 'Try again'}
+          </MotionButton>
+        </MotionDiv>
+      ) : null}
+
+      <MotionDiv className="admin-filters" variants={fadeUpVariants}>
         <label className="admin-filter admin-filter-search">
           <span>Search poem</span>
           <input
@@ -129,52 +256,54 @@ function AdminDashboardPage() {
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
             placeholder="Search by title, slug, or lines"
+            disabled={loading}
           />
         </label>
-        <label className="admin-filter">
-          <span>Visibility</span>
-          <select
-            value={visibilityFilter}
-            onChange={(event) => setVisibilityFilter(event.target.value)}
-          >
-            <option value="all">All</option>
-            <option value="published">Published</option>
-            <option value="draft">Draft</option>
-          </select>
-        </label>
-        <label className="admin-filter">
-          <span>Sort</span>
-          <select
-            value={sortMode}
-            onChange={(event) => setSortMode(event.target.value)}
-          >
-            <option value="updated-desc">Latest updated</option>
-            <option value="updated-asc">Oldest updated</option>
-            <option value="title-asc">Title A-Z</option>
-            <option value="title-desc">Title Z-A</option>
-          </select>
-        </label>
-      </motion.div>
+        <ToolbarDropdown
+          label="Visibility"
+          value={visibilityFilter}
+          options={[
+            { value: 'all', label: 'All' },
+            { value: 'published', label: 'Published' },
+            { value: 'draft', label: 'Draft' },
+          ]}
+          onChange={setVisibilityFilter}
+          dropdownKey="visibility"
+          activeMenu={activeMenu}
+          setActiveMenu={setActiveMenu}
+          disabled={loading}
+        />
+        <ToolbarDropdown
+          label="Sort"
+          value={sortMode}
+          options={[
+            { value: 'updated-desc', label: 'Latest updated' },
+            { value: 'updated-asc', label: 'Oldest updated' },
+            { value: 'views-desc', label: 'Most viewed' },
+            { value: 'views-asc', label: 'Least viewed' },
+            { value: 'title-asc', label: 'Title A-Z' },
+            { value: 'title-desc', label: 'Title Z-A' },
+          ]}
+          onChange={setSortMode}
+          dropdownKey="sort"
+          activeMenu={activeMenu}
+          setActiveMenu={setActiveMenu}
+          disabled={loading}
+        />
+      </MotionDiv>
 
       {!loading && !error ? (
-        <motion.p className="admin-filter-meta status-text" variants={fadeUpVariants}>
+        <MotionP className="admin-filter-meta status-text" variants={fadeUpVariants}>
           {filteredPoems.length} {filteredPoems.length === 1 ? 'poem' : 'poems'} shown
           {hasFilters ? ' after filtering' : ''}
-        </motion.p>
+        </MotionP>
       ) : null}
 
-      {loading ? (
-        <motion.p className="status-text admin-state" variants={fadeUpVariants}>
-          Loading poems...
-        </motion.p>
+      {loading ? <AdminDashboardSkeleton count={5} /> : null}
+      {!loading && !error ? (
+        <DashboardList poems={filteredPoems} onDelete={handleDelete} deletingId={deletingId} />
       ) : null}
-      {error ? (
-        <motion.p className="error-text admin-state" variants={fadeUpVariants}>
-          {error}
-        </motion.p>
-      ) : null}
-      {!loading && !error ? <DashboardList poems={filteredPoems} onDelete={handleDelete} /> : null}
-    </motion.section>
+    </MotionSection>
   )
 }
 

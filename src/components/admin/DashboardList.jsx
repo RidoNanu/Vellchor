@@ -1,12 +1,13 @@
 import { Link } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
 
-function DashboardList({ poems, onDelete }) {
+const MotionList = motion.ul
+const MotionItem = motion.li
+const MotionLink = motion.create(Link)
+const MotionButton = motion.button
+
+function DashboardList({ poems, onDelete, deletingId = '' }) {
   const prefersReducedMotion = useReducedMotion()
-  const MotionList = motion.ul
-  const MotionItem = motion.li
-  const MotionLink = motion.create(Link)
-  const MotionButton = motion.button
 
   const listVariants = {
     hidden: {},
@@ -52,7 +53,18 @@ function DashboardList({ poems, onDelete }) {
           whileHover={prefersReducedMotion ? undefined : { y: -2 }}
           transition={{ duration: 0.2 }}
         >
-          <p className="dashboard-title">{poem.title}</p>
+          <div className="dashboard-info">
+            <p className="dashboard-title">{poem.title}</p>
+            {poem.views !== undefined && (
+              <span className="dashboard-views" style={{ fontSize: '0.8rem', color: 'var(--color-text-muted, #666)', display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.15rem' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                {poem.views} {poem.views === 1 ? 'view' : 'views'}
+              </span>
+            )}
+          </div>
           <div className="dashboard-actions">
             <MotionLink
               className="dashboard-link"
@@ -67,11 +79,12 @@ function DashboardList({ poems, onDelete }) {
               type="button"
               className="dashboard-delete"
               onClick={() => onDelete(poem.id)}
-              whileHover={prefersReducedMotion ? undefined : { y: -1 }}
-              whileTap={prefersReducedMotion ? undefined : { scale: 0.97 }}
+              disabled={deletingId === poem.id}
+              whileHover={prefersReducedMotion || deletingId === poem.id ? undefined : { y: -1 }}
+              whileTap={prefersReducedMotion || deletingId === poem.id ? undefined : { scale: 0.97 }}
               transition={{ duration: 0.18 }}
             >
-              Delete
+              {deletingId === poem.id ? 'Deleting...' : 'Delete'}
             </MotionButton>
           </div>
         </MotionItem>

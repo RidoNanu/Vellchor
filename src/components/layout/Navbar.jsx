@@ -1,10 +1,11 @@
 import { motion, useReducedMotion } from 'framer-motion'
 import { Link, NavLink } from 'react-router-dom'
 
+const MotionLink = motion.create(Link)
+const MotionNavLink = motion.create(NavLink)
+
 function Navbar() {
   const prefersReducedMotion = useReducedMotion()
-  const MotionLink = motion.create(Link)
-  const MotionNavLink = motion.create(NavLink)
 
   return (
     <header className="navbar">
